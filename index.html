@@ -113,35 +113,25 @@
 
       <!-- COLUMN 2 -->
       <div>
-        <div class="sec" data-title="Business Details">
-          <div class="section-title">BUSINESS DETAILS</div>
-          <table class="form">
-            <tr><td colspan="2"><div class="fl"><label>Branch Office</label><input></div></td></tr>
-            <tr>
-              <td><div class="fl"><label>Phone</label><input></div></td>
-              <td><div class="fl"><label>Fax</label><input></div></td>
-            </tr>
-            <tr>
-              <td><div class="fl"><label>Website</label><input></div></td>
-              <td><div class="fl"><label>Company Email</label><input id="email" type="email"></div></td>
-            </tr>
-            <tr><td colspan="2"><div class="fl"><label>Business Structure (Sole Ownership, Partnership, Corporation…)</label><input></div></td></tr>
-            <tr>
-              <td><div class="fl"><label>Type of Business</label><input></div></td>
-              <td><div class="fl"><label>Year Established</label><input></div></td>
-            </tr>
-            <tr>
-              <td><div class="fl"><label>GST</label><input></div></td>
-              <td><div class="fl"><label>PST</label><input></div></td>
-            </tr>
-          </table>
-        </div>
-
         <div class="sec" data-title="Ship-to Addresses">
           <div class="section-title">SHIP-TO ADDRESSES
             <button type="button" class="btn-ghost" onclick="addShip()">＋ Add ship-to</button>
           </div>
           <div id="shipContainer"></div>
+        </div>
+
+        <div class="sec" data-title="Contact Details">
+          <div class="section-title">CONTACT DETAILS</div>
+          <table class="form">
+            <tr>
+              <td><div class="fl"><label>Phone</label><input></div></td>
+              <td><div class="fl"><label>Fax</label><input></div></td>
+            </tr>
+            <tr>
+              <td><div class="fl"><label>Website <span class="req">*</span></label><input required placeholder="www.example.com"></div></td>
+              <td><div class="fl"><label>Company Email</label><input id="email" type="email"></div></td>
+            </tr>
+          </table>
         </div>
       </div>
 
@@ -164,6 +154,21 @@
                 <label class="pay disabled"><input type="checkbox" disabled> <span>Interac <em class="no">— not accepted</em></span></label>
               </div>
             </td></tr>
+          </table>
+        </div>
+
+        <div class="sec" data-title="Business Details">
+          <div class="section-title">BUSINESS DETAILS</div>
+          <table class="form">
+            <tr><td colspan="2"><div class="fl"><label>Business Structure (Sole Ownership, Partnership, Corporation…)</label><input></div></td></tr>
+            <tr>
+              <td><div class="fl"><label>Type of Business</label><input></div></td>
+              <td><div class="fl"><label>Year Established</label><input></div></td>
+            </tr>
+            <tr>
+              <td><div class="fl"><label>GST</label><input></div></td>
+              <td><div class="fl"><label>PST</label><input></div></td>
+            </tr>
           </table>
         </div>
 
