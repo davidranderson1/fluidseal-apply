@@ -102,10 +102,9 @@
               <td><div class="fl"><label>Prov.</label><input id="bill_prov"></div></td>
             </tr>
             <tr>
-              <td><div class="fl"><label>Country</label><input id="bill_country" value="Canada"></div></td>
               <td><div class="fl"><label>Postal Code</label>
-                <input id="bill_pc" placeholder="e.g. T2C 1V5" oninput="onPostalInput('bill')"></div>
-                <div class="pc-hint">Enter postal code — address auto-fills</div></td>
+                <input id="bill_pc" placeholder="e.g. T2C 1V5" oninput="onPostalInput('bill')"></div></td>
+              <td><div class="fl"><label>Country</label><input id="bill_country" value="Canada"></div></td>
             </tr>
           </table>
         </div>
@@ -118,10 +117,6 @@
             <button type="button" class="btn-ghost" onclick="addShip()">＋ Add ship-to</button>
           </div>
           <div id="shipContainer"></div>
-        </div>
-
-        <div class="sec" data-title="Contact Details">
-          <div class="section-title">CONTACT DETAILS</div>
           <table class="form">
             <tr>
               <td><div class="fl"><label>Phone</label><input></div></td>
@@ -274,7 +269,10 @@
         <tr>
           <td><div class="fl"><label>Postal Code</label>
             <input id="${id}_pc" placeholder="e.g. T5S 1E5" oninput="onPostalInput('${id}')"></div></td>
-          <td><div class="fl"><label>Attention / Label</label><input placeholder="e.g. Warehouse 2"></div></td>
+          <td><div class="fl"><label>Country</label><input id="${id}_country" value="Canada"></div></td>
+        </tr>
+        <tr>
+          <td colspan="2"><div class="fl"><label>Attention / Label</label><input placeholder="e.g. Warehouse 2"></div></td>
         </tr>
       </table>`;
     document.getElementById('shipContainer').appendChild(div);
