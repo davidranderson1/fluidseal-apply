@@ -185,10 +185,12 @@
           <div id="creditReqBlock" style="display:none;">
             <table class="form">
               <tr>
-                <td><div class="fl"><label>Estimated Monthly Purchases $</label><input></div></td>
+                <td><div class="fl"><label>Estimated Monthly Purchases $</label><input id="estMonthly" type="number" min="0" step="1" oninput="onEstMonthlyInput()"></div></td>
                 <td><div class="fl"><label>Credit Amount Requested $</label><input></div></td>
               </tr>
             </table>
+            <div id="net30Msg" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-size:12.5px;font-weight:600;">A minimum of <strong>$500</strong> in estimated monthly purchases is required for Net 30 credit terms. Enter $500 or more to continue.</div>
+            <div id="net30Extra" style="display:none;">
             <div class="section-title" style="border-radius:0;">CONTACTS <span style="font-weight:500;font-size:11px;opacity:.85;">email optional</span></div>
             <table class="form">
               <tr><td><div class="fl"><label>Owner / President</label><input></div></td><td><div class="fl"><label>Email</label><input type="email"></div></td></tr>
@@ -202,6 +204,7 @@
               <tr><td><div class="fl"><label>Firm Name</label><input></div></td><td><div class="fl"><label>Phone</label><input></div></td><td><div class="fl"><label>Email</label><input></div></td></tr>
               <tr><td><div class="fl"><label>Firm Name</label><input></div></td><td><div class="fl"><label>Phone</label><input></div></td><td><div class="fl"><label>Email</label><input></div></td></tr>
             </table>
+            </div>
           </div>
         </div>
       </div>
@@ -247,7 +250,19 @@
 
   /* ===== conditional reveals ===== */
   function toggleBankRef(cb){ document.getElementById('bankRefSec').style.display = cb.checked ? 'block' : 'none'; }
-  function toggleNet30(cb){ document.getElementById('creditReqBlock').style.display = cb.checked ? 'block' : 'none'; }
+  function toggleNet30(cb){ document.getElementById('creditReqBlock').style.display = cb.checked ? 'block' : 'none'; evalNet30(); }
+  /* Net 30 requires >= $500 estimated monthly purchases; contacts + trade refs stay hidden until then */
+  const NET30_MIN=500;
+  function estMonthlyVal(){ const el=document.getElementById('estMonthly'); return el?(parseFloat((el.value||'').replace(/[^0-9.]/g,''))||0):0; }
+  function onEstMonthlyInput(){ evalNet30(); }
+  function evalNet30(){
+    const net30=document.getElementById('net30').checked;
+    const extra=document.getElementById('net30Extra'), msg=document.getElementById('net30Msg');
+    if(!extra||!msg) return;
+    if(!net30){ extra.style.display='none'; msg.style.display='none'; return; }
+    if(estMonthlyVal()>=NET30_MIN){ extra.style.display='block'; msg.style.display='none'; }
+    else { extra.style.display='none'; msg.style.display='block'; }
+  }
 
   /* ===== multi ship-to ===== */
   let shipCount=0;
@@ -354,6 +369,8 @@
       if(title==='Credit Request'){
         const net30=document.getElementById('net30').checked;
         if(!net30){ inner+=sectionBlock(title,[{label:'Net 30 days requested', val:'No'}]); return; }
+        // only include contacts/trade refs when the $500 threshold is met (net30Extra visible)
+        if(document.getElementById('net30Extra').style.display==='none'){ fields=[...document.querySelectorAll('#creditReqBlock > table .fl')].map(collectFl).filter(f=>f.label); }
         fields=[{label:'Net 30 days requested', val:'YES'}, ...fields];
       }
       inner+=sectionBlock(title, fields);
@@ -384,6 +401,7 @@
     const statusEl=document.getElementById('status'); statusEl.className='status'; statusEl.textContent='';
     const token=(window.hcaptcha&&hcaptcha.getResponse)?hcaptcha.getResponse():'';
     if(!token){ statusEl.className='status err'; statusEl.textContent='Please complete the captcha before submitting.'; return false; }
+    if(document.getElementById('net30').checked && estMonthlyVal()<NET30_MIN){ statusEl.className='status err'; statusEl.textContent='For Net 30 credit terms, estimated monthly purchases must be at least $500.'; document.getElementById('estMonthly').focus(); return false; }
     const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Submitting…';
 
     const company=document.getElementById('company').value.trim();
@@ -423,6 +441,7 @@
         if(window.hcaptcha) hcaptcha.reset();
         document.getElementById('creditReqBlock').style.display='none';
         document.getElementById('bankRefSec').style.display='none';
+        evalNet30();
       }else{
         statusEl.className='status err';
         statusEl.textContent='Submission failed: '+(data.error||('HTTP '+res.status))+'. Please try again or email absecretary@sealsonline.com.';
