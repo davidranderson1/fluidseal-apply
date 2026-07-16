@@ -51,6 +51,7 @@
   .pay em.no{color:#b91c1c;font-weight:600;text-decoration:none;}
   .net30{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#111;cursor:pointer;background:rgba(0,0,0,.08);padding:3px 9px;border-radius:6px;}
   .net30 input{width:15px;height:15px;accent-color:#111;cursor:pointer;}
+  .req{color:#b91c1c;}
 
   .captcha-row{margin-top:26px;}
   .actions{margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
@@ -88,28 +89,24 @@
         <div class="sec" data-title="Credit Customer Application">
           <div class="section-title yellow">CREDIT CUSTOMER APPLICATION</div>
           <table class="form">
-            <tr><td colspan="3"><div class="fl"><label>Company Name</label><input id="company"></div></td></tr>
+            <tr>
+              <td><div class="fl"><label>Applicant Name <span class="req">*</span></label><input id="applicant_name" required></div></td>
+              <td><div class="fl"><label>Applicant Email <span class="req">*</span></label><input id="applicant_email" type="email" required placeholder="you@company.com"></div></td>
+            </tr>
+            <tr><td colspan="2"><div class="fl"><label>Company Name</label><input id="company"></div></td></tr>
             <tr>
               <td><div class="fl"><label>Postal Code</label>
                 <input id="bill_pc" placeholder="e.g. T2C 1V5" oninput="onPostalInput('bill')"></div>
                 <div class="pc-hint">Enter postal code first — address auto-fills</div></td>
-              <td colspan="2"><div class="fl"><label>Billing Address</label><input id="bill_addr" placeholder="Start typing…"></div></td>
+              <td><div class="fl"><label>Billing Address</label><input id="bill_addr" placeholder="Start typing…"></div></td>
             </tr>
             <tr>
               <td><div class="fl"><label>City</label><input id="bill_city"></div></td>
               <td><div class="fl"><label>Prov.</label><input id="bill_prov"></div></td>
-              <td><div class="fl"><label>Country</label><input id="bill_country" value="Canada"></div></td>
             </tr>
-          </table>
-        </div>
-
-        <div class="sec" data-title="Contacts">
-          <div class="section-title">CONTACTS</div>
-          <table class="form">
-            <tr><td><div class="fl"><label>Owner / President</label><input></div></td></tr>
-            <tr><td><div class="fl"><label>General Manager</label><input></div></td></tr>
-            <tr><td><div class="fl"><label>Purchaser / Buyer</label><input></div></td></tr>
-            <tr><td><div class="fl"><label>A/P Manager</label><input></div></td></tr>
+            <tr>
+              <td colspan="2"><div class="fl"><label>Country</label><input id="bill_country" value="Canada"></div></td>
+            </tr>
           </table>
         </div>
       </div>
@@ -126,7 +123,7 @@
             </tr>
             <tr>
               <td><div class="fl"><label>Website</label><input></div></td>
-              <td><div class="fl"><label>Email</label><input id="email" type="email"></div></td>
+              <td><div class="fl"><label>Company Email</label><input id="email" type="email"></div></td>
             </tr>
             <tr><td colspan="2"><div class="fl"><label>Business Structure (Sole Ownership, Partnership, Corporation…)</label><input></div></td></tr>
             <tr>
@@ -192,6 +189,13 @@
                 <td><div class="fl"><label>Credit Amount Requested $</label><input></div></td>
               </tr>
             </table>
+            <div class="section-title" style="border-radius:0;">CONTACTS <span style="font-weight:500;font-size:11px;opacity:.85;">email optional</span></div>
+            <table class="form">
+              <tr><td><div class="fl"><label>Owner / President</label><input></div></td><td><div class="fl"><label>Email</label><input type="email"></div></td></tr>
+              <tr><td><div class="fl"><label>General Manager</label><input></div></td><td><div class="fl"><label>Email</label><input type="email"></div></td></tr>
+              <tr><td><div class="fl"><label>Purchaser / Buyer</label><input></div></td><td><div class="fl"><label>Email</label><input type="email"></div></td></tr>
+              <tr><td><div class="fl"><label>A/P Manager</label><input></div></td><td><div class="fl"><label>Email</label><input type="email"></div></td></tr>
+            </table>
             <div class="section-title" style="border-radius:0;">TRADE REFERENCES</div>
             <table class="form">
               <tr><td><div class="fl"><label>Firm Name</label><input></div></td><td><div class="fl"><label>Phone</label><input></div></td><td><div class="fl"><label>Email</label><input></div></td></tr>
@@ -211,6 +215,14 @@
           <td><div class="fl"><label>Date</label><input type="date"></div></td>
         </tr>
       </table>
+    </div>
+
+    <div class="sec">
+      <div class="section-title">ATTACHMENT <span style="font-weight:500;font-size:11px;opacity:.85;">optional</span></div>
+      <table class="form"><tr><td style="padding:10px 12px;">
+        <input type="file" id="attachment">
+        <div style="font-size:11px;color:#6b7280;margin-top:5px">Attach a supporting document (PDF, image, spreadsheet…) — max 7 MB. It will be emailed with your application.</div>
+      </td></tr></table>
     </div>
 
     <div class="captcha-row">
@@ -313,16 +325,18 @@
     let inner='';
     document.querySelectorAll('#applyForm .sec').forEach(sec=>{
       const title=sec.dataset.title;
+      if(!title) return;
       if(sec.dataset.kind==='payment'){
         const picked=[...sec.querySelectorAll('input[name=pay]:checked')].map(c=>c.value);
         inner+=sectionBlock(title,[{label:'Selected method(s)', val: picked.length?picked.join(', '):'(none selected)'}]);
         return;
       }
-      if(sec.style.display==='none') return;
+      if(sec.style.display==='none') return; // skip hidden (unopened) sections
       let fields=[...sec.querySelectorAll('.fl')].map(collectFl).filter(f=>f.label);
       if(title==='Credit Request'){
         const net30=document.getElementById('net30').checked;
-        fields=[{label:'Net 30 days requested', val: net30?'YES':'No'}, ...fields];
+        if(!net30){ inner+=sectionBlock(title,[{label:'Net 30 days requested', val:'No'}]); return; }
+        fields=[{label:'Net 30 days requested', val:'YES'}, ...fields];
       }
       inner+=sectionBlock(title, fields);
     });
@@ -331,8 +345,8 @@
       <div style="max-width:840px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e5e7eb;padding:26px 30px">
         <table width="100%"><tr>
           <td><div style="font-size:11px;color:#8b90a0;letter-spacing:1.5px;font-weight:700">ACCOUNT / CREDIT APPLICATION</div>
-            <div style="font-size:24px;font-weight:800;color:#111827">${esc(document.getElementById('company').value)||'New Applicant'}</div>
-            <div style="font-size:12px;color:#555;margin-top:4px">Submitted ${esc(date)} · Fluidseal AB</div></td>
+            <div style="font-size:24px;font-weight:800;color:#111827">${esc(document.getElementById('company').value)||esc(document.getElementById('applicant_name').value)||'New Applicant'}</div>
+            <div style="font-size:12px;color:#555;margin-top:4px">Submitted ${esc(date)} · apply.fluidsealab.com</div></td>
           <td align="right" valign="top">
             <span style="display:inline-block;width:16px;height:16px;background:#FFD400;border-radius:50%;border:5px solid #000;vertical-align:middle"></span>
             <span style="font-size:22px;font-weight:800;font-style:italic;color:#111;vertical-align:middle">&nbsp;fluidseal</span>
@@ -343,6 +357,9 @@
       </div></div>`;
   }
 
+  /* read an attached file as base64 (no data-URI prefix) */
+  function readFileB64(file){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>{ const s=String(r.result); resolve(s.substring(s.indexOf(',')+1)); }; r.onerror=reject; r.readAsDataURL(file); }); }
+
   /* ===== submit ===== */
   async function submitApplication(e){
     e.preventDefault();
@@ -352,9 +369,21 @@
     const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Submitting…';
 
     const company=document.getElementById('company').value.trim();
-    const applicant_email=document.getElementById('email').value.trim();
+    const applicant_name=document.getElementById('applicant_name').value.trim();
+    const applicant_email=document.getElementById('applicant_email').value.trim();
     const html=buildApplicationHtml();
 
+    // optional user-attached file
+    let file_base64='', file_name='', file_type='';
+    const fEl=document.getElementById('attachment');
+    if(fEl && fEl.files && fEl.files[0]){
+      const f=fEl.files[0];
+      if(f.size > 7*1024*1024){ statusEl.className='status err'; statusEl.textContent='Attachment is too large (max 7 MB). Please attach a smaller file.'; btn.disabled=false; btn.textContent='Submit Application'; return false; }
+      file_name=f.name; file_type=f.type||'application/octet-stream';
+      try{ file_base64=await readFileB64(f); }catch(_){ }
+    }
+
+    // build a matching PDF from the same HTML
     let pdf_base64='';
     try{
       const holder=document.getElementById('pdfHolder'); holder.innerHTML=html;
@@ -367,7 +396,7 @@
     try{
       const res=await fetch(ENDPOINT,{ method:'POST',
         headers:{ 'Content-Type':'application/json', 'apikey':ANON_KEY, 'Authorization':'Bearer '+ANON_KEY },
-        body: JSON.stringify({ html, pdf_base64, applicant_email, company, captcha_token:token }) });
+        body: JSON.stringify({ html, pdf_base64, applicant_email, applicant_name, company, captcha_token:token, file_base64, file_name, file_type }) });
       const data=await res.json().catch(()=>({}));
       if(res.ok && data.ok){
         statusEl.className='status ok';
@@ -389,6 +418,7 @@
     return false;
   }
 
+  /* start with one ship-to row */
   addShip();
 </script>
 
