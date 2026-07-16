@@ -272,7 +272,7 @@
     attachPlaces(id+'_addr', id);
   }
 
-  /* ===== address lookup (demo table + optional Google Places) ===== */
+  /* ===== address lookup (built-in demo table; no external key) ===== */
   const DEMO_PC={
     "T2C1V5":{city:"Calgary",prov:"AB",addr:"3815 61st Ave SE",country:"Canada"},
     "T5S1E5":{city:"Edmonton",prov:"AB",addr:"17309 107th Ave NW",country:"Canada"},
@@ -422,7 +422,8 @@
   addShip();
 </script>
 
-<!-- Google Places live address lookup — key restricted to apply.fluidsealab.com -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCJMqRxWmDFRlR5zm2XI5T_bXqdMS34rNo&libraries=places&callback=initPlaces" async defer></script>
+<!-- Address lookup uses the built-in demo table (no key, no cost). For accurate Google lookup
+     WITHOUT exposing a key in the page, proxy Places/Geocoding through the Supabase edge function
+     (key stored as a server-side secret). A client-side Maps key is intentionally NOT embedded here. -->
 </body>
 </html>
