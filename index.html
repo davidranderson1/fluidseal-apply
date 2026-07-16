@@ -106,6 +106,14 @@
                 <input id="bill_pc" placeholder="e.g. T2C 1V5" oninput="onPostalInput('bill')"></div></td>
               <td><div class="fl"><label>Country</label><input id="bill_country" value="Canada"></div></td>
             </tr>
+            <tr>
+              <td><div class="fl"><label>Phone</label><input id="bill_phone"></div></td>
+              <td><div class="fl"><label>Fax</label><input id="bill_fax"></div></td>
+            </tr>
+            <tr>
+              <td><div class="fl"><label>Website <span class="req">*</span></label><input id="bill_website" required placeholder="www.example.com"></div></td>
+              <td><div class="fl"><label>Company Email</label><input id="bill_email" type="email"></div></td>
+            </tr>
           </table>
         </div>
       </div>
@@ -114,7 +122,10 @@
       <div>
         <div class="sec" data-title="Ship-to Addresses">
           <div class="section-title">SHIP-TO ADDRESSES
-            <button type="button" class="btn-ghost" onclick="addShip()">＋ Add ship-to</button>
+            <span style="display:flex;gap:12px;align-items:center;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.02em;cursor:pointer;"><input type="checkbox" id="sameAsBill" checked onchange="toggleSameAsBill(this)" style="width:14px;height:14px;accent-color:var(--fs-yellow);"> Same as Bill To</label>
+              <button type="button" class="btn-ghost" onclick="addShip()">＋ Add ship-to</button>
+            </span>
           </div>
           <div id="shipContainer"></div>
           <table class="form">
@@ -123,7 +134,7 @@
               <td><div class="fl"><label>Fax</label><input></div></td>
             </tr>
             <tr>
-              <td><div class="fl"><label>Website <span class="req">*</span></label><input required placeholder="www.example.com"></div></td>
+              <td><div class="fl"><label>Website</label><input placeholder="www.example.com"></div></td>
               <td><div class="fl"><label>Company Email</label><input id="email" type="email"></div></td>
             </tr>
           </table>
@@ -251,6 +262,25 @@
     else { extra.style.display='none'; msg.style.display='block'; }
   }
 
+  /* ===== Ship-to "Same as Bill To" ===== */
+  function firstShip(){ return document.querySelector('#shipContainer .shipblock'); }
+  function sameAsBillChecked(){ const c=document.getElementById('sameAsBill'); return c?c.checked:false; }
+  const BILL_SHIP_MAP={ _addr:'bill_addr', _city:'bill_city', _prov:'bill_prov', _pc:'bill_pc', _country:'bill_country' };
+  function syncShipFromBill(){
+    if(!sameAsBillChecked()) return;
+    const b=firstShip(); if(!b) return; const id=b.id;
+    for(const suf in BILL_SHIP_MAP){ const t=document.getElementById(id+suf), s=document.getElementById(BILL_SHIP_MAP[suf]); if(t&&s) t.value=s.value; }
+  }
+  function setShipReadonly(ro){
+    const b=firstShip(); if(!b) return; const id=b.id;
+    Object.keys(BILL_SHIP_MAP).forEach(suf=>{ const t=document.getElementById(id+suf); if(t){ t.readOnly=ro; t.style.background=ro?'#f3f4f6':''; t.style.color=ro?'#6b7280':''; } });
+  }
+  function toggleSameAsBill(cb){ if(cb.checked){ syncShipFromBill(); setShipReadonly(true); } else { setShipReadonly(false); } }
+  function initSameAsBill(){
+    ['bill_addr','bill_city','bill_prov','bill_pc','bill_country'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input', syncShipFromBill); });
+    const cb=document.getElementById('sameAsBill'); if(cb&&cb.checked){ syncShipFromBill(); setShipReadonly(true); }
+  }
+
   /* ===== multi ship-to ===== */
   let shipCount=0;
   function addShip(){
@@ -302,6 +332,7 @@
     const d=await geo('postal',{code:raw});
     if(d && d.ok){ setVal(prefix+'_city',d.city); setVal(prefix+'_prov',d.prov); setVal(prefix+'_country',d.country||'Canada'); if(d.address) setVal(prefix+'_addr',d.address); }
     else { const dm=DEMO_PC[raw]; if(dm){ setVal(prefix+'_city',dm.city); setVal(prefix+'_prov',dm.prov); setVal(prefix+'_addr',dm.addr); setVal(prefix+'_country',dm.country); } }
+    syncShipFromBill();
   }
   /* address autocomplete dropdown (predictions via server proxy) */
   let acBox=null, acTimer=null, acInput=null;
@@ -322,7 +353,8 @@
       item.onmousedown=async(e)=>{ e.preventDefault(); hideAc();
         const det=await geo('details',{placeId:p.placeId});
         if(det.ok){ setVal(prefix+'_addr',det.address||p.text); setVal(prefix+'_city',det.city); setVal(prefix+'_prov',det.prov); setVal(prefix+'_country',det.country||'Canada'); if(det.postal) setVal(prefix+'_pc',det.postal); }
-        else { input.value=p.text; } };
+        else { input.value=p.text; }
+        syncShipFromBill(); };
       box.appendChild(item); });
     positionAc(input); box.style.display='block';
   }
@@ -444,6 +476,9 @@
         if(window.hcaptcha) hcaptcha.reset();
         document.getElementById('creditReqBlock').style.display='none';
         document.getElementById('voidChequeBox').style.display='none';
+        document.getElementById('sameAsBill').checked=true;
+        [...document.querySelectorAll('#shipContainer .shipblock')].slice(1).forEach(b=>b.remove());
+        syncShipFromBill(); setShipReadonly(true);
         evalNet30();
       }else{
         statusEl.className='status err';
@@ -461,6 +496,7 @@
   /* start with one ship-to row + attach billing-address autocomplete */
   attachAutocomplete('bill_addr','bill');
   addShip();
+  initSameAsBill();
 </script>
 
 <!-- Accurate Google address lookup (postal geocode + address autocomplete) runs through the
