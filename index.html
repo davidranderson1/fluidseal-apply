@@ -98,7 +98,7 @@
               <td><div class="fl"><label>Postal Code</label>
                 <input id="bill_pc" placeholder="e.g. T2C 1V5" oninput="onPostalInput('bill')"></div>
                 <div class="pc-hint">Enter postal code first — address auto-fills</div></td>
-              <td><div class="fl"><label>Billing Address</label><input id="bill_addr" placeholder="Start typing…"></div></td>
+              <td><div class="fl"><label>Billing Address</label><input id="bill_addr" placeholder="Start typing…" autocomplete="off"></div></td>
             </tr>
             <tr>
               <td><div class="fl"><label>City</label><input id="bill_city"></div></td>
@@ -260,7 +260,7 @@
         <tr>
           <td class="pc-cell" style="width:33%"><div class="fl"><label>Postal Code</label>
             <input id="${id}_pc" placeholder="e.g. T5S 1E5" oninput="onPostalInput('${id}')"></div></td>
-          <td colspan="2"><div class="fl"><label>Ship-to Address</label><input id="${id}_addr" placeholder="Start typing…"></div></td>
+          <td colspan="2"><div class="fl"><label>Ship-to Address</label><input id="${id}_addr" placeholder="Start typing…" autocomplete="off"></div></td>
         </tr>
         <tr>
           <td><div class="fl"><label>City</label><input id="${id}_city"></div></td>
@@ -269,43 +269,61 @@
         </tr>
       </table>`;
     document.getElementById('shipContainer').appendChild(div);
-    attachPlaces(id+'_addr', id);
+    attachAutocomplete(id+'_addr', id);
   }
 
-  /* ===== address lookup (built-in demo table; no external key) ===== */
-  const DEMO_PC={
+  /* ===== address lookup via server proxy (Google key stays server-side) ===== */
+  const GEO_ENDPOINT = "https://hnmbjqhxvxakhdzgetxw.supabase.co/functions/v1/geo-lookup";
+  const DEMO_PC={ /* offline fallback if the lookup service is unreachable */
     "T2C1V5":{city:"Calgary",prov:"AB",addr:"3815 61st Ave SE",country:"Canada"},
     "T5S1E5":{city:"Edmonton",prov:"AB",addr:"17309 107th Ave NW",country:"Canada"},
     "M5V2T6":{city:"Toronto",prov:"ON",addr:"290 Bremner Blvd",country:"Canada"},
     "V6B1A1":{city:"Vancouver",prov:"BC",addr:"555 W Hastings St",country:"Canada"}
   };
-  let googleReady=false, geocoder=null;
-  function onPostalInput(prefix){
+  function setVal(id,v){ const el=document.getElementById(id); if(el&&v!=null&&v!=='')el.value=v; }
+  async function geo(action, payload){
+    try{
+      const r=await fetch(GEO_ENDPOINT,{ method:'POST',
+        headers:{'Content-Type':'application/json','apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY},
+        body:JSON.stringify({action, ...payload}) });
+      return await r.json();
+    }catch(_){ return {ok:false}; }
+  }
+  async function onPostalInput(prefix){
     const raw=(document.getElementById(prefix+'_pc').value||'').toUpperCase().replace(/\s+/g,'');
     if(raw.length<6) return;
-    if(googleReady && geocoder){
-      geocoder.geocode({componentRestrictions:{country:'CA',postalCode:raw}},(res,status)=>{
-        if(status==='OK'&&res[0]) fillFromGoogle(prefix,res[0]); else demoFill(prefix,raw);
-      });
-    } else demoFill(prefix,raw);
+    const d=await geo('postal',{code:raw});
+    if(d && d.ok){ setVal(prefix+'_city',d.city); setVal(prefix+'_prov',d.prov); setVal(prefix+'_country',d.country||'Canada'); if(d.address) setVal(prefix+'_addr',d.address); }
+    else { const dm=DEMO_PC[raw]; if(dm){ setVal(prefix+'_city',dm.city); setVal(prefix+'_prov',dm.prov); setVal(prefix+'_addr',dm.addr); setVal(prefix+'_country',dm.country); } }
   }
-  function demoFill(prefix,pc){ const d=DEMO_PC[pc]; if(!d) return;
-    setVal(prefix+'_city',d.city);setVal(prefix+'_prov',d.prov);setVal(prefix+'_addr',d.addr);setVal(prefix+'_country',d.country); }
-  function fillFromGoogle(prefix,place){ let city='',prov='',route='',num='';
-    (place.address_components||[]).forEach(c=>{ if(c.types.includes('locality'))city=c.long_name;
-      if(c.types.includes('administrative_area_level_1'))prov=c.short_name;
-      if(c.types.includes('route'))route=c.long_name; if(c.types.includes('street_number'))num=c.long_name; });
-    setVal(prefix+'_city',city);setVal(prefix+'_prov',prov); if(route)setVal(prefix+'_addr',(num?num+' ':'')+route); setVal(prefix+'_country','Canada'); }
-  function setVal(id,v){ const el=document.getElementById(id); if(el&&v)el.value=v; }
-  function attachPlaces(inputId,prefix){ if(!googleReady) return; const el=document.getElementById(inputId); if(!el||el.dataset.ac) return;
-    const ac=new google.maps.places.Autocomplete(el,{componentRestrictions:{country:'ca'},fields:['address_components'],types:['address']});
-    ac.addListener('place_changed',()=>{ const p=ac.getPlace(); if(p&&p.address_components){ fillFromGoogle(prefix,p);
-      (p.address_components||[]).forEach(c=>{if(c.types.includes('postal_code'))setVal(prefix+'_pc',c.long_name);}); } });
-    el.dataset.ac='1'; }
-  function initPlaces(){ googleReady=true; geocoder=new google.maps.Geocoder();
-    attachPlaces('bill_addr','bill');
-    document.querySelectorAll('.shipblock input[id$="_addr"]').forEach(el=>attachPlaces(el.id, el.id.replace('_addr',''))); }
-  window.initPlaces=initPlaces;
+  /* address autocomplete dropdown (predictions via server proxy) */
+  let acBox=null, acTimer=null, acInput=null;
+  function ensureAcBox(){ if(acBox) return acBox; acBox=document.createElement('div');
+    acBox.style.cssText='position:absolute;z-index:9999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:250px;overflow:auto;font-size:13px;display:none;';
+    document.body.appendChild(acBox); return acBox; }
+  function hideAc(){ if(acBox) acBox.style.display='none'; }
+  function positionAc(input){ const r=input.getBoundingClientRect(); ensureAcBox();
+    acBox.style.left=(window.scrollX+r.left)+'px'; acBox.style.top=(window.scrollY+r.bottom+2)+'px'; acBox.style.width=Math.max(r.width,260)+'px'; }
+  async function runAutocomplete(input, prefix){
+    const q=input.value.trim(); if(q.length<3){ hideAc(); return; }
+    const d=await geo('autocomplete',{q});
+    const box=ensureAcBox(); box.innerHTML='';
+    if(!d.ok || !d.predictions || !d.predictions.length){ hideAc(); return; }
+    d.predictions.slice(0,6).forEach(p=>{ const item=document.createElement('div');
+      item.textContent=p.text; item.style.cssText='padding:8px 12px;cursor:pointer;border-bottom:1px solid #f1f1f1;';
+      item.onmouseenter=()=>item.style.background='#f3f4f6'; item.onmouseleave=()=>item.style.background='#fff';
+      item.onmousedown=async(e)=>{ e.preventDefault(); hideAc();
+        const det=await geo('details',{placeId:p.placeId});
+        if(det.ok){ setVal(prefix+'_addr',det.address||p.text); setVal(prefix+'_city',det.city); setVal(prefix+'_prov',det.prov); setVal(prefix+'_country',det.country||'Canada'); if(det.postal) setVal(prefix+'_pc',det.postal); }
+        else { input.value=p.text; } };
+      box.appendChild(item); });
+    positionAc(input); box.style.display='block';
+  }
+  function attachAutocomplete(inputId, prefix){ const el=document.getElementById(inputId); if(!el||el.dataset.ac) return; el.dataset.ac='1';
+    el.addEventListener('input', ()=>{ clearTimeout(acTimer); acInput=el; acTimer=setTimeout(()=>runAutocomplete(el,prefix),250); });
+    el.addEventListener('blur', ()=>setTimeout(hideAc,150));
+    el.addEventListener('focus', ()=>{ if(el.value.trim().length>=3) runAutocomplete(el,prefix); }); }
+  window.addEventListener('scroll',()=>{ if(acBox&&acBox.style.display==='block'&&acInput) positionAc(acInput); }, true);
 
   /* ===== serialize the filled form to branded HTML (email body + PDF source) ===== */
   function esc(s){ return (s??'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -418,12 +436,13 @@
     return false;
   }
 
-  /* start with one ship-to row */
+  /* start with one ship-to row + attach billing-address autocomplete */
+  attachAutocomplete('bill_addr','bill');
   addShip();
 </script>
 
-<!-- Address lookup uses the built-in demo table (no key, no cost). For accurate Google lookup
-     WITHOUT exposing a key in the page, proxy Places/Geocoding through the Supabase edge function
-     (key stored as a server-side secret). A client-side Maps key is intentionally NOT embedded here. -->
+<!-- Accurate Google address lookup (postal geocode + address autocomplete) runs through the
+     Supabase geo-lookup edge function; the Google key is a server-side secret and never appears
+     in this page. Built-in demo table is only an offline fallback. -->
 </body>
 </html>
