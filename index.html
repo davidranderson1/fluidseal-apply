@@ -54,7 +54,7 @@
   .req{color:#b91c1c;}
 
   .captcha-row{margin-top:26px;}
-  .actions{margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .actions{margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
   .btn-dark{background:var(--fs-black);color:#fff;border:2px solid var(--fs-black);padding:12px 26px;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;}
   .btn-dark:disabled{opacity:.5;cursor:default;}
   .note{color:var(--muted);font-size:13px;}
@@ -223,11 +223,11 @@
       <div class="h-captcha" data-sitekey="ccd4877c-a446-4720-bf04-68fa7dfc7862"></div>
     </div>
 
+    <div id="status" class="status"></div>
     <div class="actions">
       <button type="submit" id="submitBtn" class="btn-dark">Submit Application</button>
       <span class="note">Your application is emailed securely to Fluidseal. A copy is attached as PDF.</span>
     </div>
-    <div id="status" class="status"></div>
   </form>
 </div>
 
@@ -393,7 +393,7 @@
     if(document.getElementById('net30').checked && estMonthlyVal()<NET30_MIN){ statusEl.className='status err'; statusEl.textContent='For Net 30 credit terms, estimated monthly purchases must be at least $500.'; document.getElementById('estMonthly').focus(); return false; }
     const wireChecked=[...document.querySelectorAll('input[name=pay]:checked')].some(c=>c.value==='Wire Transfer');
     const vEl=document.getElementById('void_cheque');
-    if(wireChecked && (!vEl||!vEl.files||!vEl.files[0])){ statusEl.className='status err'; statusEl.textContent='Please attach a void cheque for wire transfer.'; return false; }
+    if(wireChecked && (!vEl||!vEl.files||!vEl.files[0])){ statusEl.className='status err'; statusEl.textContent='Please attach a Void Cheque — it is required when Wire Transfer is selected (see Payment Method above).'; const _vb=document.getElementById('voidChequeBox'); _vb.style.outline='2px solid #b91c1c'; _vb.style.boxShadow='0 0 0 3px rgba(185,28,28,.15)'; _vb.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>{_vb.style.outline='';_vb.style.boxShadow='';},4000); return false; }
     const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Submitting…';
 
     const company=document.getElementById('company').value.trim();
