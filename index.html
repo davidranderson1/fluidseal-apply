@@ -152,28 +152,18 @@
           <table class="form">
             <tr><td style="padding:10px 12px;">
               <div class="pay-grid">
-                <label class="pay"><input type="checkbox" name="pay" value="Wire Transfer" onchange="toggleBankRef(this)"> <span>Wire Transfer</span></label>
+                <label class="pay"><input type="checkbox" name="pay" value="Wire Transfer" onchange="toggleWire(this)"> <span>Wire Transfer</span></label>
+                <div id="voidChequeBox" style="display:none;margin:0 0 4px 26px;padding:9px 11px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;">
+                  <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:5px;">Void Cheque <span style="color:#b91c1c">*</span></div>
+                  <input type="file" id="void_cheque">
+                  <div style="font-size:11px;color:#6b7280;margin-top:3px;">Attach a void cheque — required for wire transfer.</div>
+                </div>
                 <label class="pay"><input type="checkbox" name="pay" value="Cheque"> <span>Cheque</span></label>
                 <label class="pay"><input type="checkbox" name="pay" value="Credit Card (Visa/Mastercard)"> <span>Credit Card <em>(Visa / Mastercard)</em></span></label>
                 <label class="pay disabled"><input type="checkbox" disabled> <span>American Express <em class="no">— not accepted</em></span></label>
                 <label class="pay disabled"><input type="checkbox" disabled> <span>Interac <em class="no">— not accepted</em></span></label>
               </div>
             </td></tr>
-          </table>
-        </div>
-
-        <div class="sec" id="bankRefSec" data-title="Bank References" style="display:none;">
-          <div class="section-title">BANK REFERENCES <span style="font-weight:500;font-size:11px;opacity:.85;">required for wire transfer</span></div>
-          <table class="form">
-            <tr><td colspan="2"><div class="fl"><label>Name</label><input></div></td></tr>
-            <tr>
-              <td><div class="fl"><label>Address</label><input></div></td>
-              <td><div class="fl"><label>Contact Name</label><input></div></td>
-            </tr>
-            <tr>
-              <td><div class="fl"><label>Phone</label><input></div></td>
-              <td><div class="fl"><label>Fax</label><input></div></td>
-            </tr>
           </table>
         </div>
 
@@ -249,7 +239,7 @@
   const ANON_KEY = "sb_publishable_HbRa8tV_Vmj5WPdvDc37uw_Vp7WajUe";
 
   /* ===== conditional reveals ===== */
-  function toggleBankRef(cb){ document.getElementById('bankRefSec').style.display = cb.checked ? 'block' : 'none'; }
+  function toggleWire(cb){ document.getElementById('voidChequeBox').style.display = cb.checked ? 'block' : 'none'; }
   function toggleNet30(cb){ document.getElementById('creditReqBlock').style.display = cb.checked ? 'block' : 'none'; evalNet30(); }
   /* Net 30 requires >= $500 estimated monthly purchases; contacts + trade refs stay hidden until then */
   const NET30_MIN=500;
@@ -364,12 +354,11 @@
         inner+=sectionBlock(title,[{label:'Selected method(s)', val: picked.length?picked.join(', '):'(none selected)'}]);
         return;
       }
-      if(sec.style.display==='none') return; // skip hidden (unopened) sections
+      if(sec.style.display==='none') return;
       let fields=[...sec.querySelectorAll('.fl')].map(collectFl).filter(f=>f.label);
       if(title==='Credit Request'){
         const net30=document.getElementById('net30').checked;
         if(!net30){ inner+=sectionBlock(title,[{label:'Net 30 days requested', val:'No'}]); return; }
-        // only include contacts/trade refs when the $500 threshold is met (net30Extra visible)
         if(document.getElementById('net30Extra').style.display==='none'){ fields=[...document.querySelectorAll('#creditReqBlock > table .fl')].map(collectFl).filter(f=>f.label); }
         fields=[{label:'Net 30 days requested', val:'YES'}, ...fields];
       }
@@ -402,6 +391,9 @@
     const token=(window.hcaptcha&&hcaptcha.getResponse)?hcaptcha.getResponse():'';
     if(!token){ statusEl.className='status err'; statusEl.textContent='Please complete the captcha before submitting.'; return false; }
     if(document.getElementById('net30').checked && estMonthlyVal()<NET30_MIN){ statusEl.className='status err'; statusEl.textContent='For Net 30 credit terms, estimated monthly purchases must be at least $500.'; document.getElementById('estMonthly').focus(); return false; }
+    const wireChecked=[...document.querySelectorAll('input[name=pay]:checked')].some(c=>c.value==='Wire Transfer');
+    const vEl=document.getElementById('void_cheque');
+    if(wireChecked && (!vEl||!vEl.files||!vEl.files[0])){ statusEl.className='status err'; statusEl.textContent='Please attach a void cheque for wire transfer.'; return false; }
     const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Submitting…';
 
     const company=document.getElementById('company').value.trim();
@@ -419,6 +411,15 @@
       try{ file_base64=await readFileB64(f); }catch(_){ }
     }
 
+    // void cheque (required when Wire Transfer selected)
+    let void_base64='', void_name='', void_type='';
+    if(wireChecked && vEl && vEl.files && vEl.files[0]){
+      const vf=vEl.files[0];
+      if(vf.size>7*1024*1024){ statusEl.className='status err'; statusEl.textContent='Void cheque file is too large (max 7 MB).'; btn.disabled=false; btn.textContent='Submit Application'; return false; }
+      void_name=vf.name; void_type=vf.type||'application/octet-stream';
+      try{ void_base64=await readFileB64(vf); }catch(_){ }
+    }
+
     // build a matching PDF from the same HTML
     let pdf_base64='';
     try{
@@ -432,7 +433,7 @@
     try{
       const res=await fetch(ENDPOINT,{ method:'POST',
         headers:{ 'Content-Type':'application/json', 'apikey':ANON_KEY, 'Authorization':'Bearer '+ANON_KEY },
-        body: JSON.stringify({ html, pdf_base64, applicant_email, applicant_name, company, captcha_token:token, file_base64, file_name, file_type }) });
+        body: JSON.stringify({ html, pdf_base64, applicant_email, applicant_name, company, captcha_token:token, file_base64, file_name, file_type, void_base64, void_name, void_type }) });
       const data=await res.json().catch(()=>({}));
       if(res.ok && data.ok){
         statusEl.className='status ok';
@@ -440,7 +441,7 @@
         document.getElementById('applyForm').reset();
         if(window.hcaptcha) hcaptcha.reset();
         document.getElementById('creditReqBlock').style.display='none';
-        document.getElementById('bankRefSec').style.display='none';
+        document.getElementById('voidChequeBox').style.display='none';
         evalNet30();
       }else{
         statusEl.className='status err';
