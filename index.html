@@ -194,7 +194,9 @@
                   <strong style="color:#231F20;">No action needed now.</strong> Once your account is approved, we'll email you Fluidseal's banking details (institution, transit &amp; account numbers) so you can set up the EFT / wire transfer.
                 </div>
                 <label class="pay"><input type="checkbox" name="pay" value="Cheque" onchange="onPayChange(this)"> <span>Cheque</span></label>
+                <div id="chequeInfoBox" style="display:none;margin:0 0 4px 26px;padding:10px 12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;font-size:13px;color:#4b5563;line-height:1.45;"><strong style="color:#231F20;">Seriously? 😂</strong> No judgment — cheques are welcome. We'll include remittance details with your invoices.</div>
                 <label class="pay"><input type="checkbox" name="pay" value="Credit Card (Visa/Mastercard)" onchange="onPayChange(this)"> <span>Credit Card <em>(Visa / Mastercard)</em></span></label>
+                <div id="ccInfoBox" style="display:none;margin:0 0 4px 26px;padding:10px 12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;font-size:12px;color:#4b5563;line-height:1.45;"><strong style="color:#231F20;">Secure payment link.</strong> We accept Visa &amp; Mastercard through a secure checkout link, so your card number never touches this form. We'll email you the link to complete payment — the secure checkout is being finalized and will be sent with your account confirmation.</div>
                 <label class="pay disabled"><input type="checkbox" disabled> <span>American Express <em class="no">— not accepted</em></span></label>
                 <label class="pay disabled"><input type="checkbox" disabled> <span>Interac <em class="no">— not accepted</em></span></label>
               </div>
@@ -323,7 +325,11 @@
     const grid=cb.closest('.pay-grid');
     if(cb.checked){ grid.querySelectorAll('input[name=pay]').forEach(i=>{ if(i!==cb) i.checked=false; }); }
     grid.querySelectorAll('label.pay').forEach(l=>{ l.style.display = (cb.checked && !l.contains(cb)) ? 'none' : ''; });
-    const wire=grid.querySelector('input[name=pay][value="EFT/Wire Transfer"]'); if(wire) toggleWire(wire);
+    const on=v=>{ const el=grid.querySelector('input[name=pay][value="'+v+'"]'); return !!(el&&el.checked); };
+    const box=(id,show)=>{ const b=document.getElementById(id); if(b) b.style.display=show?'block':'none'; };
+    box('wireInfoBox', on('EFT/Wire Transfer'));
+    box('chequeInfoBox', on('Cheque'));
+    box('ccInfoBox', on('Credit Card (Visa/Mastercard)'));
   }
   function resetPay(){ document.querySelectorAll('#applyForm .pay-grid label.pay').forEach(l=>l.style.display=''); }
   /* Special Instructions: reveal the conditional field next to each ticked box */
@@ -460,7 +466,7 @@
   }
   function collectFl(fl){ const label=fl.querySelector('label'); const input=fl.querySelector('input,select,textarea');
     return { label: label?label.textContent.trim():'', val: input?input.value.trim():'' }; }
-  function buildApplicationHtml(){
+  function buildSectionsHtml(){
     let inner='';
     document.querySelectorAll('#applyForm .sec').forEach(sec=>{
       const title=sec.dataset.title;
@@ -487,25 +493,57 @@
       }
       inner+=sectionBlock(title, fields);
     });
-    const date=new Date().toLocaleString('en-CA');
+    return inner;
+  }
+  function rushBannerHtml(){
     const rushOn=!!(document.getElementById('rush')&&document.getElementById('rush').checked);
     const rushSoV=(document.getElementById('rush_so')&&document.getElementById('rush_so').value.trim())||'';
-    const rushBanner=rushOn?`<div style="margin-top:16px;background:#fdecec;border:1px solid #f3b4b4;border-left:5px solid #c8222a;border-radius:8px;padding:12px 14px;color:#8a1418;font-weight:800;font-size:15px;letter-spacing:.3px">RUSH &mdash; ORDER PENDING${rushSoV?` &nbsp;&middot;&nbsp; SO# ${esc(rushSoV)}`:''}</div>`:'';
+    return rushOn?`<div style="margin-top:16px;background:#fdecec;border:1px solid #f3b4b4;border-left:5px solid #c8222a;border-radius:8px;padding:12px 14px;color:#8a1418;font-weight:800;font-size:15px;letter-spacing:.3px">RUSH &mdash; ORDER PENDING${rushSoV?` &nbsp;&middot;&nbsp; SO# ${esc(rushSoV)}`:''}</div>`:'';
+  }
+  function docName(){ return esc(document.getElementById('company').value)||esc(document.getElementById('applicant_name').value)||'New Applicant'; }
+  /* EMAIL body (grey card layout) */
+  function buildApplicationHtml(){
+    const inner=buildSectionsHtml(); const date=new Date().toLocaleString('en-CA');
     return `<div style="font-family:Arial,Helvetica,sans-serif;background:#f4f5f7;padding:24px">
       <div style="max-width:840px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e5e7eb;padding:26px 30px">
         <table width="100%"><tr>
           <td><div style="font-size:11px;color:#8b90a0;letter-spacing:1.5px;font-weight:700">ACCOUNT / CREDIT APPLICATION</div>
-            <div style="font-size:24px;font-weight:800;color:#111827">${esc(document.getElementById('company').value)||esc(document.getElementById('applicant_name').value)||'New Applicant'}</div>
+            <div style="font-size:24px;font-weight:800;color:#111827">${docName()}</div>
             <div style="font-size:12px;color:#555;margin-top:4px">Submitted ${esc(date)} · apply.fluidsealab.com</div></td>
           <td align="right" valign="top">
             <span style="display:inline-block;width:16px;height:16px;background:#FFDD00;border-radius:50%;border:5px solid #231F20;vertical-align:middle"></span>
             <span style="font-size:22px;font-weight:800;font-style:italic;color:#111;vertical-align:middle">&nbsp;fluidseal</span>
             <span style="font-size:9px;color:#555"> AB Inc.</span></td>
         </tr></table>
-        ${rushBanner}
+        ${rushBannerHtml()}
         ${inner}
         <div style="margin-top:18px;font-size:11px;color:#8b90a0">Submitted via the online application form at apply.fluidsealab.com</div>
       </div></div>`;
+  }
+  /* PRINT / PDF (clean white, branded black+yellow header, content flush to top) */
+  function buildPdfHtml(){
+    const inner=buildSectionsHtml(); const date=new Date().toLocaleString('en-CA');
+    return `<div style="width:800px;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#111">
+      <div style="background:#231F20;border-bottom:4px solid #FFDD00;padding:16px 24px">
+        <table width="100%" cellspacing="0" cellpadding="0"><tr>
+          <td valign="middle">
+            <div style="font-size:10px;letter-spacing:2px;color:#FFDD00;font-weight:700;text-transform:uppercase">Account / Credit Application</div>
+            <div style="font-size:22px;font-weight:800;color:#fff;line-height:1.1;margin-top:3px">${docName()}</div>
+            <div style="font-size:10px;color:#c8ccd0;margin-top:4px">Submitted ${esc(date)} &middot; apply.fluidsealab.com</div>
+          </td>
+          <td valign="middle" align="right" style="white-space:nowrap">
+            <span style="display:inline-block;width:13px;height:13px;background:#FFDD00;border-radius:50%;vertical-align:middle"></span>
+            <span style="font-size:20px;font-weight:800;font-style:italic;color:#fff;vertical-align:middle">&nbsp;fluidseal</span>
+            <span style="font-size:9px;color:#c8ccd0">&nbsp;AB Inc.</span>
+          </td>
+        </tr></table>
+      </div>
+      <div style="padding:6px 24px 22px">
+        ${rushBannerHtml()}
+        ${inner}
+        <div style="margin-top:18px;font-size:10px;color:#8b90a0">Submitted via the online application form at apply.fluidsealab.com</div>
+      </div>
+    </div>`;
   }
 
   /* read an attached file as base64 (no data-URI prefix) */
@@ -520,8 +558,14 @@
     if(document.getElementById('net30').checked && estMonthlyVal()<NET30_MIN){ statusEl.className='status err'; statusEl.textContent='For Net 30 credit terms, estimated monthly purchases must be at least $500.'; document.getElementById('estMonthly').focus(); return false; }
     // require a payment method
     if(![...document.querySelectorAll('input[name=pay]:checked')].length){ statusEl.className='status err'; statusEl.textContent='Please select a payment method before submitting.'; const _p=document.querySelector('.sec[data-kind="payment"]'); if(_p) _p.scrollIntoView({behavior:'smooth',block:'center'}); return false; }
-    // validate any filled-in email fields
     const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // email-instruction checkboxes require a valid address
+    for(const [cbId,fId,label] of [['si_invoice','si_invoice_email','invoices'],['si_stmt','si_stmt_email','statements']]){
+      const cb=document.getElementById(cbId);
+      if(cb&&cb.checked){ const f=document.getElementById(fId); const v=((f&&f.value)||'').trim();
+        if(!v||!emailRe.test(v)){ statusEl.className='status err'; statusEl.textContent='Please enter a valid email address for '+label+', or untick "Email '+label+' to".'; if(f){f.scrollIntoView({behavior:'smooth',block:'center'}); f.focus();} return false; } }
+    }
+    // validate any other filled-in email fields
     const badEmail=[...document.querySelectorAll('#applyForm input[type=email]')].find(el=>el.value.trim() && el.offsetParent!==null && !emailRe.test(el.value.trim()));
     if(badEmail){ statusEl.className='status err'; statusEl.textContent='Please enter a valid email address (e.g. name@company.com).'; badEmail.scrollIntoView({behavior:'smooth',block:'center'}); badEmail.focus(); return false; }
     const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Submitting…';
@@ -543,10 +587,10 @@
       try{ file_base64=await readFileB64(f); }catch(_){ }
     }
 
-    // build a matching PDF from the same HTML (capture the inner content div — html2canvas returns 0 height on the absolute wrapper)
+    // build a matching PDF (dedicated print layout; capture the inner content div)
     let pdf_base64='';
     try{
-      const holder=document.getElementById('pdfHolder'); holder.innerHTML=html;
+      const holder=document.getElementById('pdfHolder'); holder.innerHTML=buildPdfHtml();
       await new Promise(r=>setTimeout(r,80));
       const uri=await html2pdf().set({margin:8,image:{type:'jpeg',quality:0.98},
         jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
@@ -566,10 +610,11 @@
         document.getElementById('applyForm').reset();
         if(window.hcaptcha) hcaptcha.reset();
         document.getElementById('creditReqBlock').style.display='none';
-        document.getElementById('wireInfoBox').style.display='none';
+        ['wireInfoBox','chequeInfoBox','ccInfoBox'].forEach(id=>{const b=document.getElementById(id); if(b) b.style.display='none';});
         resetPay();
         siToggle();
         if(document.getElementById('rush')) document.getElementById('rush').checked=false; toggleRush();
+        const _ad=document.getElementById('auth_date'); if(_ad) _ad.value=todayLocal();
         document.getElementById('sameAsBill').checked=true;
         [...document.querySelectorAll('#shipContainer .shipblock')].slice(1).forEach(b=>b.remove());
         syncShipFromBill(); setShipEntryVisible(false);
@@ -587,10 +632,14 @@
     return false;
   }
 
+  /* today's date (local) for the Authorization Date default */
+  function todayLocal(){ const t=new Date(); return new Date(t.getTime()-t.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+
   /* start with one ship-to row + attach billing-address autocomplete */
   attachAutocomplete('bill_addr','bill');
   addShip();
   initSameAsBill();
+  (function(){ const d=document.getElementById('auth_date'); if(d&&!d.value) d.value=todayLocal(); })();
 </script>
 
 <!-- Accurate Google address lookup (postal geocode + address autocomplete) runs through the
