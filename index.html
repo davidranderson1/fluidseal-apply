@@ -74,7 +74,7 @@
   .status{margin-top:14px;font-size:14px;font-weight:600;display:none;padding:12px 16px;border-radius:8px;}
   .status.ok{display:block;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;}
   .status.err{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;}
-  #pdfHolder{position:fixed;left:-9999px;top:0;width:800px;}
+  #pdfHolder{position:absolute;left:-9999px;top:0;width:820px;background:#fff;}
 
   @media(max-width:900px){.grid3{grid-template-columns:1fr;}.mainnav{display:none;}}
   @media(min-width:901px) and (max-width:1200px){.grid3{grid-template-columns:1fr 1fr;}}
@@ -117,6 +117,11 @@
   <p class="lede">Complete the credit application below to open a business account with Fluidseal. We'll follow up by email.</p>
 
   <form id="applyForm" onsubmit="return submitApplication(event)">
+    <div id="rushBar" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:2px solid var(--important);border-radius:10px;background:#fff;padding:11px 16px;margin:0 0 20px;">
+      <label style="display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;color:var(--important);cursor:pointer;white-space:nowrap;"><input type="checkbox" id="rush" onchange="toggleRush()" style="width:18px;height:18px;accent-color:var(--important);"> RUSH — Order pending</label>
+      <span style="color:var(--text-muted);font-size:13px;">Have an order waiting on this account? Tick this and we'll prioritize your application.</span>
+      <div id="rushSoBox" style="display:none;margin-left:auto;"><input id="rush_so" class="si-in" placeholder="SO # (if known)" style="max-width:190px;"></div>
+    </div>
     <div class="grid3">
 
       <!-- COLUMN 1 -->
@@ -284,9 +289,9 @@
     <div class="sec" data-title="Authorization">
       <table class="form" style="border-top:1px solid #d1d5db;margin-top:22px;">
         <tr>
-          <td><div class="fl"><label>Signed By</label><input></div></td>
-          <td><div class="fl"><label>Title</label><input></div></td>
-          <td><div class="fl"><label>Date</label><input type="date"></div></td>
+          <td><div class="fl"><label>Signed By <span class="req">*</span></label><input id="auth_signed" required></div></td>
+          <td><div class="fl"><label>Title <span class="req">*</span></label><input id="auth_title" required></div></td>
+          <td><div class="fl"><label>Date <span class="req">*</span></label><input id="auth_date" type="date" required></div></td>
         </tr>
       </table>
     </div>
@@ -323,6 +328,8 @@
   function resetPay(){ document.querySelectorAll('#applyForm .pay-grid label.pay').forEach(l=>l.style.display=''); }
   /* Special Instructions: reveal the conditional field next to each ticked box */
   function siToggle(){ const m={si_po:'si_po_box',si_invoice:'si_invoice_box',si_stmt:'si_stmt_box',si_tax:'si_tax_box'}; for(const c in m){ const cb=document.getElementById(c), b=document.getElementById(m[c]); if(cb&&b) b.style.display=cb.checked?'block':'none'; } }
+  /* Rush / order-pending: reveal SO# field when ticked */
+  function toggleRush(){ const r=document.getElementById('rush'), b=document.getElementById('rushSoBox'); if(b) b.style.display=(r&&r.checked)?'block':'none'; }
   function toggleNet30(cb){ document.getElementById('creditReqBlock').style.display = cb.checked ? 'block' : 'none'; evalNet30(); }
   /* Net 30 requires >= $500 estimated monthly purchases; contacts + trade refs stay hidden until then */
   const NET30_MIN=500;
@@ -481,6 +488,9 @@
       inner+=sectionBlock(title, fields);
     });
     const date=new Date().toLocaleString('en-CA');
+    const rushOn=!!(document.getElementById('rush')&&document.getElementById('rush').checked);
+    const rushSoV=(document.getElementById('rush_so')&&document.getElementById('rush_so').value.trim())||'';
+    const rushBanner=rushOn?`<div style="margin-top:16px;background:#fdecec;border:1px solid #f3b4b4;border-left:5px solid #c8222a;border-radius:8px;padding:12px 14px;color:#8a1418;font-weight:800;font-size:15px;letter-spacing:.3px">RUSH &mdash; ORDER PENDING${rushSoV?` &nbsp;&middot;&nbsp; SO# ${esc(rushSoV)}`:''}</div>`:'';
     return `<div style="font-family:Arial,Helvetica,sans-serif;background:#f4f5f7;padding:24px">
       <div style="max-width:840px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e5e7eb;padding:26px 30px">
         <table width="100%"><tr>
@@ -492,6 +502,7 @@
             <span style="font-size:22px;font-weight:800;font-style:italic;color:#111;vertical-align:middle">&nbsp;fluidseal</span>
             <span style="font-size:9px;color:#555"> AB Inc.</span></td>
         </tr></table>
+        ${rushBanner}
         ${inner}
         <div style="margin-top:18px;font-size:11px;color:#8b90a0">Submitted via the online application form at apply.fluidsealab.com</div>
       </div></div>`;
@@ -507,11 +518,19 @@
     const token=(window.hcaptcha&&hcaptcha.getResponse)?hcaptcha.getResponse():'';
     if(!token){ statusEl.className='status err'; statusEl.textContent='Please complete the captcha before submitting.'; return false; }
     if(document.getElementById('net30').checked && estMonthlyVal()<NET30_MIN){ statusEl.className='status err'; statusEl.textContent='For Net 30 credit terms, estimated monthly purchases must be at least $500.'; document.getElementById('estMonthly').focus(); return false; }
+    // require a payment method
+    if(![...document.querySelectorAll('input[name=pay]:checked')].length){ statusEl.className='status err'; statusEl.textContent='Please select a payment method before submitting.'; const _p=document.querySelector('.sec[data-kind="payment"]'); if(_p) _p.scrollIntoView({behavior:'smooth',block:'center'}); return false; }
+    // validate any filled-in email fields
+    const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const badEmail=[...document.querySelectorAll('#applyForm input[type=email]')].find(el=>el.value.trim() && el.offsetParent!==null && !emailRe.test(el.value.trim()));
+    if(badEmail){ statusEl.className='status err'; statusEl.textContent='Please enter a valid email address (e.g. name@company.com).'; badEmail.scrollIntoView({behavior:'smooth',block:'center'}); badEmail.focus(); return false; }
     const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Submitting…';
 
     const company=document.getElementById('company').value.trim();
     const applicant_name=document.getElementById('applicant_name').value.trim();
     const applicant_email=document.getElementById('applicant_email').value.trim();
+    const rush=!!(document.getElementById('rush')&&document.getElementById('rush').checked);
+    const rush_so=(document.getElementById('rush_so')&&document.getElementById('rush_so').value.trim())||'';
     const html=buildApplicationHtml();
 
     // optional user-attached file
@@ -528,8 +547,10 @@
     let pdf_base64='';
     try{
       const holder=document.getElementById('pdfHolder'); holder.innerHTML=html;
-      const uri=await html2pdf().set({margin:8,jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-        html2canvas:{scale:2,useCORS:true}}).from(holder).outputPdf('datauristring');
+      await new Promise(r=>setTimeout(r,80));
+      const uri=await html2pdf().set({margin:8,image:{type:'jpeg',quality:0.98},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:820,scrollX:0,scrollY:0}}).from(holder).outputPdf('datauristring');
       pdf_base64=uri.substring(uri.indexOf(',')+1);
       holder.innerHTML='';
     }catch(err){ console.warn('PDF generation failed, sending HTML only', err); }
@@ -537,7 +558,7 @@
     try{
       const res=await fetch(ENDPOINT,{ method:'POST',
         headers:{ 'Content-Type':'application/json', 'apikey':ANON_KEY, 'Authorization':'Bearer '+ANON_KEY },
-        body: JSON.stringify({ html, pdf_base64, applicant_email, applicant_name, company, captcha_token:token, file_base64, file_name, file_type }) });
+        body: JSON.stringify({ html, pdf_base64, applicant_email, applicant_name, company, captcha_token:token, file_base64, file_name, file_type, rush, rush_so }) });
       const data=await res.json().catch(()=>({}));
       if(res.ok && data.ok){
         statusEl.className='status ok';
@@ -548,6 +569,7 @@
         document.getElementById('wireInfoBox').style.display='none';
         resetPay();
         siToggle();
+        if(document.getElementById('rush')) document.getElementById('rush').checked=false; toggleRush();
         document.getElementById('sameAsBill').checked=true;
         [...document.querySelectorAll('#shipContainer .shipblock')].slice(1).forEach(b=>b.remove());
         syncShipFromBill(); setShipEntryVisible(false);
