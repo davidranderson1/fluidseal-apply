@@ -59,6 +59,7 @@
   .net30{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#111;cursor:pointer;background:rgba(0,0,0,.08);padding:3px 9px;border-radius:6px;}
   .net30 input{width:15px;height:15px;accent-color:var(--black);cursor:pointer;}
   .req{color:var(--important);}
+  .si-in{width:100%;max-width:320px;border:1px solid var(--grey-light);border-radius:6px;padding:6px 9px;font-size:13px;outline:none;font-family:inherit;}
 
   .captcha-row{margin-top:26px;}
   .actions{margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
@@ -245,6 +246,28 @@
       </div>
     </div>
 
+    <div class="sec" data-title="Special Instructions" data-kind="special">
+      <div class="section-title" style="margin-top:22px;">SPECIAL INSTRUCTIONS <span style="font-weight:500;font-size:11px;opacity:.85;">optional</span></div>
+      <table class="form">
+        <tr><td>
+          <div class="pay-grid" style="padding:12px 14px;">
+            <label class="pay"><input type="checkbox" id="si_po" onchange="siToggle()"> <span>PO required on all orders</span></label>
+            <div id="si_po_box" style="display:none;margin:-3px 0 3px 26px;"><input id="si_po_num" class="si-in" placeholder="Default PO # (if any)"></div>
+            <label class="pay"><input type="checkbox" id="si_invoice" onchange="siToggle()"> <span>Email invoices to</span></label>
+            <div id="si_invoice_box" style="display:none;margin:-3px 0 3px 26px;"><input id="si_invoice_email" type="email" class="si-in" placeholder="invoices@yourcompany.com"></div>
+            <label class="pay"><input type="checkbox" id="si_stmt" onchange="siToggle()"> <span>Email statements to</span></label>
+            <div id="si_stmt_box" style="display:none;margin:-3px 0 3px 26px;"><input id="si_stmt_email" type="email" class="si-in" placeholder="statements@yourcompany.com"></div>
+            <label class="pay"><input type="checkbox" id="si_monthly"> <span>Monthly statement required</span></label>
+            <label class="pay"><input type="checkbox" id="si_orderconf"> <span>Order confirmation required</span></label>
+            <label class="pay"><input type="checkbox" id="si_delivery"> <span>Delivery appointment required</span></label>
+            <label class="pay"><input type="checkbox" id="si_tax" onchange="siToggle()"> <span>Tax exempt</span></label>
+            <div id="si_tax_box" style="display:none;margin:-3px 0 3px 26px;"><input id="si_tax_num" class="si-in" placeholder="Exemption #"></div>
+          </div>
+        </td></tr>
+        <tr><td><div class="fl"><label>Other instructions</label><input id="si_other" placeholder="Anything else we should know…"></div></td></tr>
+      </table>
+    </div>
+
     <div class="sec" data-title="Authorization">
       <table class="form" style="border-top:1px solid #d1d5db;margin-top:22px;">
         <tr>
@@ -285,6 +308,8 @@
     const wire=grid.querySelector('input[name=pay][value="EFT/Wire Transfer"]'); if(wire) toggleWire(wire);
   }
   function resetPay(){ document.querySelectorAll('#applyForm .pay-grid label.pay').forEach(l=>l.style.display=''); }
+  /* Special Instructions: reveal the conditional field next to each ticked box */
+  function siToggle(){ const m={si_po:'si_po_box',si_invoice:'si_invoice_box',si_stmt:'si_stmt_box',si_tax:'si_tax_box'}; for(const c in m){ const cb=document.getElementById(c), b=document.getElementById(m[c]); if(cb&&b) b.style.display=cb.checked?'block':'none'; } }
   function toggleNet30(cb){ document.getElementById('creditReqBlock').style.display = cb.checked ? 'block' : 'none'; evalNet30(); }
   /* Net 30 requires >= $500 estimated monthly purchases; contacts + trade refs stay hidden until then */
   const NET30_MIN=500;
@@ -425,6 +450,13 @@
         inner+=sectionBlock(title,[{label:'Selected method(s)', val: picked.length?picked.join(', '):'(none selected)'}]);
         return;
       }
+      if(sec.dataset.kind==='special'){
+        const siRow=(id,label,fid)=>{ const c=document.getElementById(id); if(!c||!c.checked) return null; let v='Yes'; if(fid){ const f=document.getElementById(fid); if(f&&f.value.trim()) v=f.value.trim(); } return {label, val:v}; };
+        const rows=[ siRow('si_po','PO required on all orders','si_po_num'), siRow('si_invoice','Email invoices to','si_invoice_email'), siRow('si_stmt','Email statements to','si_stmt_email'), siRow('si_monthly','Monthly statement required'), siRow('si_orderconf','Order confirmation required'), siRow('si_delivery','Delivery appointment required'), siRow('si_tax','Tax exempt','si_tax_num') ].filter(Boolean);
+        const o=document.getElementById('si_other'); if(o&&o.value.trim()) rows.push({label:'Other', val:o.value.trim()});
+        if(rows.length) inner+=sectionBlock(title, rows);
+        return;
+      }
       if(sec.style.display==='none') return;
       let fields=[...sec.querySelectorAll('.fl')].map(collectFl).filter(f=>f.label);
       if(title==='Credit Request'){
@@ -502,6 +534,7 @@
         document.getElementById('creditReqBlock').style.display='none';
         document.getElementById('wireInfoBox').style.display='none';
         resetPay();
+        siToggle();
         document.getElementById('sameAsBill').checked=true;
         [...document.querySelectorAll('#shipContainer .shipblock')].slice(1).forEach(b=>b.remove());
         syncShipFromBill(); setShipEntryVisible(false);
