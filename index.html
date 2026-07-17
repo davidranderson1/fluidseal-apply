@@ -104,7 +104,7 @@
 <path transform="matrix(1,0,0,-1,227.0498,298.645)" d="M0 0C0-29.101-23.619-52.722-52.723-52.722-81.824-52.722-105.446-29.101-105.446 0-105.446 29.105-81.824 52.723-52.723 52.723-23.619 52.723 0 29.105 0 0" fill="#ffdd00"/>
 </g>
 </svg></a>
-  <div class="mainnav"><a href="https://www.sealsonline.com" target="_blank" rel="noopener">PRODUCTS</a><a href="https://www.sealsonline.com/en/flabca/services" target="_blank" rel="noopener">SERVICES</a></div>
+  <div class="mainnav"><a href="https://www.sealsonline.com/en/flabca/categories" target="_blank" rel="noopener">PRODUCTS</a><a href="https://www.sealsonline.com/en/flabca/services" target="_blank" rel="noopener">SERVICES</a></div>
 </div>
 
 <div class="apply-page">
@@ -179,11 +179,9 @@
           <table class="form">
             <tr><td style="padding:10px 12px;">
               <div class="pay-grid">
-                <label class="pay"><input type="checkbox" name="pay" value="Wire Transfer" onchange="onPayChange(this)"> <span>Wire Transfer</span></label>
-                <div id="voidChequeBox" style="display:none;margin:0 0 4px 26px;padding:9px 11px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;">
-                  <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:5px;">Void Cheque <span style="color:#b91c1c">*</span></div>
-                  <input type="file" id="void_cheque">
-                  <div style="font-size:11px;color:#6b7280;margin-top:3px;">Attach a void cheque — required for wire transfer.</div>
+                <label class="pay"><input type="checkbox" name="pay" value="EFT/Wire Transfer" onchange="onPayChange(this)"> <span>EFT / Wire Transfer</span></label>
+                <div id="wireInfoBox" style="display:none;margin:0 0 4px 26px;padding:10px 12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;font-size:12px;color:#4b5563;line-height:1.45;">
+                  <strong style="color:#231F20;">No action needed now.</strong> Once your account is approved, we'll email you Fluidseal's banking details (institution, transit &amp; account numbers) so you can set up the EFT / wire transfer.
                 </div>
                 <label class="pay"><input type="checkbox" name="pay" value="Cheque" onchange="onPayChange(this)"> <span>Cheque</span></label>
                 <label class="pay"><input type="checkbox" name="pay" value="Credit Card (Visa/Mastercard)" onchange="onPayChange(this)"> <span>Credit Card <em>(Visa / Mastercard)</em></span></label>
@@ -197,7 +195,7 @@
         <div class="sec" data-title="Business Details">
           <div class="section-title">BUSINESS DETAILS</div>
           <table class="form">
-            <tr><td colspan="2"><div class="fl"><label>Business Structure (Sole Ownership, Partnership, Corporation…)</label><input></div></td></tr>
+            <tr><td colspan="2"><div class="fl"><label>Business Structure</label><select><option value="" selected disabled hidden>Select…</option><option>Sole Ownership</option><option>Partnership</option><option>Corporation</option><option>Other</option></select></div></td></tr>
             <tr>
               <td><div class="fl"><label>Type of Business</label><input></div></td>
               <td><div class="fl"><label>Year Established</label><input></div></td>
@@ -278,13 +276,13 @@
   const ANON_KEY = "sb_publishable_HbRa8tV_Vmj5WPdvDc37uw_Vp7WajUe";
 
   /* ===== conditional reveals ===== */
-  function toggleWire(cb){ document.getElementById('voidChequeBox').style.display = cb.checked ? 'block' : 'none'; }
+  function toggleWire(cb){ document.getElementById('wireInfoBox').style.display = cb.checked ? 'block' : 'none'; }
   /* single-select payment: choosing one hides the rest; unchoosing shows them all again */
   function onPayChange(cb){
     const grid=cb.closest('.pay-grid');
     if(cb.checked){ grid.querySelectorAll('input[name=pay]').forEach(i=>{ if(i!==cb) i.checked=false; }); }
     grid.querySelectorAll('label.pay').forEach(l=>{ l.style.display = (cb.checked && !l.contains(cb)) ? 'none' : ''; });
-    const wire=grid.querySelector('input[name=pay][value="Wire Transfer"]'); if(wire) toggleWire(wire);
+    const wire=grid.querySelector('input[name=pay][value="EFT/Wire Transfer"]'); if(wire) toggleWire(wire);
   }
   function resetPay(){ document.querySelectorAll('#applyForm .pay-grid label.pay').forEach(l=>l.style.display=''); }
   function toggleNet30(cb){ document.getElementById('creditReqBlock').style.display = cb.checked ? 'block' : 'none'; evalNet30(); }
@@ -464,9 +462,6 @@
     const token=(window.hcaptcha&&hcaptcha.getResponse)?hcaptcha.getResponse():'';
     if(!token){ statusEl.className='status err'; statusEl.textContent='Please complete the captcha before submitting.'; return false; }
     if(document.getElementById('net30').checked && estMonthlyVal()<NET30_MIN){ statusEl.className='status err'; statusEl.textContent='For Net 30 credit terms, estimated monthly purchases must be at least $500.'; document.getElementById('estMonthly').focus(); return false; }
-    const wireChecked=[...document.querySelectorAll('input[name=pay]:checked')].some(c=>c.value==='Wire Transfer');
-    const vEl=document.getElementById('void_cheque');
-    if(wireChecked && (!vEl||!vEl.files||!vEl.files[0])){ statusEl.className='status err'; statusEl.textContent='Please attach a Void Cheque — it is required when Wire Transfer is selected (see Payment Method above).'; const _vb=document.getElementById('voidChequeBox'); _vb.style.outline='2px solid #b91c1c'; _vb.style.boxShadow='0 0 0 3px rgba(185,28,28,.15)'; _vb.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>{_vb.style.outline='';_vb.style.boxShadow='';},4000); return false; }
     const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Submitting…';
 
     const company=document.getElementById('company').value.trim();
@@ -484,15 +479,6 @@
       try{ file_base64=await readFileB64(f); }catch(_){ }
     }
 
-    // void cheque (required when Wire Transfer selected)
-    let void_base64='', void_name='', void_type='';
-    if(wireChecked && vEl && vEl.files && vEl.files[0]){
-      const vf=vEl.files[0];
-      if(vf.size>7*1024*1024){ statusEl.className='status err'; statusEl.textContent='Void cheque file is too large (max 7 MB).'; btn.disabled=false; btn.textContent='Submit Application'; return false; }
-      void_name=vf.name; void_type=vf.type||'application/octet-stream';
-      try{ void_base64=await readFileB64(vf); }catch(_){ }
-    }
-
     // build a matching PDF from the same HTML
     let pdf_base64='';
     try{
@@ -506,7 +492,7 @@
     try{
       const res=await fetch(ENDPOINT,{ method:'POST',
         headers:{ 'Content-Type':'application/json', 'apikey':ANON_KEY, 'Authorization':'Bearer '+ANON_KEY },
-        body: JSON.stringify({ html, pdf_base64, applicant_email, applicant_name, company, captcha_token:token, file_base64, file_name, file_type, void_base64, void_name, void_type }) });
+        body: JSON.stringify({ html, pdf_base64, applicant_email, applicant_name, company, captcha_token:token, file_base64, file_name, file_type }) });
       const data=await res.json().catch(()=>({}));
       if(res.ok && data.ok){
         statusEl.className='status ok';
@@ -514,7 +500,7 @@
         document.getElementById('applyForm').reset();
         if(window.hcaptcha) hcaptcha.reset();
         document.getElementById('creditReqBlock').style.display='none';
-        document.getElementById('voidChequeBox').style.display='none';
+        document.getElementById('wireInfoBox').style.display='none';
         resetPay();
         document.getElementById('sameAsBill').checked=true;
         [...document.querySelectorAll('#shipContainer .shipblock')].slice(1).forEach(b=>b.remove());
