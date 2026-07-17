@@ -543,14 +543,14 @@
       try{ file_base64=await readFileB64(f); }catch(_){ }
     }
 
-    // build a matching PDF from the same HTML
+    // build a matching PDF from the same HTML (capture the inner content div — html2canvas returns 0 height on the absolute wrapper)
     let pdf_base64='';
     try{
       const holder=document.getElementById('pdfHolder'); holder.innerHTML=html;
       await new Promise(r=>setTimeout(r,80));
       const uri=await html2pdf().set({margin:8,image:{type:'jpeg',quality:0.98},
         jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:820,scrollX:0,scrollY:0}}).from(holder).outputPdf('datauristring');
+        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'}}).from(holder.firstElementChild||holder).outputPdf('datauristring');
       pdf_base64=uri.substring(uri.indexOf(',')+1);
       holder.innerHTML='';
     }catch(err){ console.warn('PDF generation failed, sending HTML only', err); }
