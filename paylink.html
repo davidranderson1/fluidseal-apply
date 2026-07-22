@@ -47,7 +47,7 @@
 
 <div class="wrap">
   <h1>Payment Link Generator</h1>
-  <p class="lede">Create a secure TD (Visa / Mastercard) payment link for a customer who owes a balance. The customer pays on TD's hosted page — card details never touch us. The amount is locked into the link and can't be changed.</p>
+  <p class="lede">Create a secure TD (Visa / Mastercard) payment link for a customer who owes a balance. The customer pays on TD's hosted page — card details never touch us. The amount is carried inside the signed link.</p>
 
   <div class="card">
     <div class="row">
@@ -71,13 +71,13 @@
       <input class="linkbox" id="link" readonly>
       <div class="actions">
         <button class="btn-ghost" onclick="copyLink()">Copy link</button>
-        <button class="btn-ghost" onclick="openLink()">Open (test)</button>
+        <button class="btn-ghost" onclick="openLink()">Open payment page</button>
         <button class="btn-ghost" onclick="emailLink()">Email to customer</button>
       </div>
     </div>
   </div>
 
-  <p class="note"><strong>Note:</strong> "Open (test)" loads TD's checkout so you can confirm the merchant and amount — do <em>not</em> enter a card unless you intend to charge. To test without a real charge, use TD's test account. Approved / declined redirect pages are configured once in the TD Online Mart portal (Administration → Order Settings).</p>
+  <p class="note"><strong>Heads up:</strong> "Open payment page" opens TD's <em>live</em> checkout. Entering a real card and clicking <em>Submit payment</em> <strong>charges the customer for real</strong> — there is no test mode on the live account. Use it to preview the amount, or to key a card for a counter / phone customer. For a genuine no‑charge test you need TD's separate test account. Approved / declined redirect pages are configured once in the TD Online Mart portal (Administration → Order Settings).</p>
 </div>
 
 <script>
