@@ -60,7 +60,7 @@
       <div class="fl"><label>Customer email (prefill / receipt)</label><input id="email" type="email" placeholder="ap@customer.com" maxlength="64"></div>
     </div>
     <div class="row">
-      <div class="fl"><label>Link expires in (days)</label><input id="expiry" type="number" min="1" max="365" value="30"></div>
+      <div class="fl"><label>Link expires in (days)</label><input id="expiry" type="number" min="1" max="365" value="5"></div>
       <div style="display:flex;align-items:flex-end;"><button class="btn" id="genBtn" onclick="generate()" style="width:100%;">Generate secure link</button></div>
     </div>
 
@@ -93,7 +93,7 @@
       customer_ref:document.getElementById('ref').value.trim(),
       name:document.getElementById('name').value.trim(),
       email:document.getElementById('email').value.trim(),
-      expiry_days:parseInt(document.getElementById('expiry').value,10)||30 };
+      expiry_days:parseInt(document.getElementById('expiry').value,10)||5 };
     const btn=document.getElementById('genBtn'); btn.disabled=true; btn.textContent='Generating…';
     try{
       const r=await fetch(ENDPOINT,{ method:'POST', headers:{'Content-Type':'application/json','apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY}, body:JSON.stringify(payload) });
